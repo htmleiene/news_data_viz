@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+    <h1 class="text-3xl font-bold text-indigo-700 mb-4">Explore Tendências de Dados em Tempo Real</h1>
+    <p class="text-gray-700 mb-6">Nossa plataforma analisa notícias globais e padrões de tendências para fornecer insights valiosos.</p>
+    
+    <div class="flex space-x-4 mb-6">
+        <input type="text" id="searchQuery" placeholder="Digite um tópico (ex: inteligência artificial)" 
+               class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <button onclick="loadData()" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition">
+            <i class="fas fa-search mr-2"></i> Analisar
+        </button>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-4 text-indigo-600"><i class="fas fa-chart-line mr-2"></i> Tendências</h2>
+        <div id="trendGraph" class="h-64"></div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-4 text-indigo-600"><i class="fas fa-smile mr-2"></i> Sentimento</h2>
+        <div id="sentimentGraph" class="h-64"></div>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-lg p-6 mt-6">
+    <h2 class="text-xl font-semibold mb-4 text-indigo-600"><i class="fas fa-newspaper mr-2"></i> Últimas Notícias</h2>
+    <div id="newsContainer" class="space-y-4"></div>
+</div>
+
+<script>
+    // Carregar dados iniciais
+    document.addEventListener('DOMContentLoaded', function() {
+        loadData('technology');
+    });
+
+    function loadData(query) {
+        const searchQuery = query || document.getElementById('searchQuery').value || 'technology';
+        
+        fetch(`/api/news?query=${encodeURIComponent(searchQuery)}`)
+            .then(response => response.json())
+            .then(data => {
+                // Atualizar gráficos
+                Plotly.newPlot('trendGraph', data.visualizations.trend_graph.data, data.visualizations.trend_graph.layout);
+                Plotly.newPlot('sentimentGraph', data.visualizations.sentiment_graph.data, data.visualizations.sentiment_graph.layout);
+                
+                // Atualizar notícias
+                const newsContainer = document.getElementById('newsContainer');
+                newsContainer.innerHTML = data.news.map(news => `
+                    <div class="border-b border-gray-200 pb-4">
+                        <h3 class="font-semibold text-lg"><a href="${news.url}" target="_blank" class="text-indigo-600 hover:underline">${news.title}</a></h3>
+                        <p class="text-gray-600 text-sm">${news.source} • ${new Date(news.date).toLocaleDateString()}</p>
+                        <p class="text-gray-800 mt-2">${news.content || ''}</p>
+                    </div>
+                `).join('');
+            });
+    }
+</script>
+{% endblock %}

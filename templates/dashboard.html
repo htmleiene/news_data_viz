@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+    <h1 class="text-3xl font-bold text-indigo-700 mb-2">Dashboard Interativo</h1>
+    <p class="text-gray-700">Visualizações avançadas e análises em tempo real</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="bg-indigo-600 text-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-2"><i class="fas fa-bolt mr-2"></i> Atualizações</h2>
+        <p class="text-3xl font-bold" id="realTimeValue">--</p>
+        <p class="text-indigo-200">Engajamento em tempo real</p>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-2 text-indigo-600"><i class="fas fa-filter mr-2"></i> Filtros</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-gray-700 mb-2">Período</label>
+                <select id="timeRange" class="w-full p-2 border border-gray-300 rounded">
+                    <option value="7">Últimos 7 dias</option>
+                    <option value="30">Últimos 30 dias</option>
+                    <option value="90">Últimos 3 meses</option>
+                </select>
+            </div>
+            <button onclick="applyFilters()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg w-full hover:bg-indigo-700 transition">
+                Aplicar Filtros
+            </button>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-xl font-semibold mb-2 text-indigo-600"><i class="fas fa-info-circle mr-2"></i> Estatísticas</h2>
+        <div id="statsContainer" class="space-y-2 text-gray-700">
+            <p>Selecione um tópico para ver as estatísticas</p>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-lg p-6">
+    <h2 class="text-xl font-semibold mb-4 text-indigo-600"><i class="fas fa-chart-bar mr-2"></i> Análise Detalhada</h2>
+    <div id="advancedChart" class="h-96"></div>
+</div>
+
+<script>
+    // Atualização em tempo real
+    function fetchRealTimeData() {
+        fetch('/api/real-time')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('realTimeValue').textContent = data.value;
+                setTimeout(fetchRealTimeData, 3000); // Atualizar a cada 3 segundos
+            });
+    }
+    
+    // Iniciar atualizações em tempo real
+    fetchRealTimeData();
+    
+    function applyFilters() {
+        const timeRange = document.getElementById('timeRange').value;
+        const query = document.getElementById('searchQuery')?.value || 'technology';
+        
+        fetch(`/api/news?query=${encodeURIComponent(query)}&days=${timeRange}`)
+            .then(response => response.json())
+            .then(data => {
+                // Atualizar estatísticas
+                const stats = data.analytics.trends;
+                document.getElementById('statsContainer').innerHTML = `
+                    <p><span class="font-semibold">Média de interesse:</span> ${stats['interest']['mean'].toFixed(1)}</p>
+                    <p><span class="font-semibold">Notícias analisadas:</span> ${data.news.length}</p>
+                    <p><span class="font-semibold">Positivas:</span> ${data.analytics.sentiment.find(s => s.sentiment === 'positive')?.count || 0}</p>
+                    <p><span class="font-semibold">Negativas:</span> ${data.analytics.sentiment.find(s => s.sentiment === 'negative')?.count || 0}</p>
+                `;
+                
+                // Gráfico avançado
+                const advancedData = [{
+                    x: data.analytics.trends['date'],
+                    y: data.analytics.trends['interest'],
+                    type: 'bar',
+                    name: 'Interesse'
+                }];
+                
+                const layout = {
+                    title: 'Análise Detalhada de Tendências',
+                    xaxis: { title: 'Data' },
+                    yaxis: { title: 'Nível de Interesse' }
+                };
+                
+                Plotly.newPlot('advancedChart', advancedData, layout);
+            });
+    }
+    
+    // Aplicar filtros iniciais
+    applyFilters();
+</script>
+{% endblock %}
